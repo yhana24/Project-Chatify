@@ -11,7 +11,7 @@ try {
   global.config = config;
 } catch (err) {
   console.error("Failed to load config.json:", err.message);
-  process.exit(1);
+  process.exit(0);
 }
 
 const bot = {
@@ -134,3 +134,5 @@ if (!message || !message.body) return;
     }
   });
 });
+// if something went wrong this will catch error globally ; >
+process.on("unhandledRejection", reason => console.log(reason));
