@@ -1,27 +1,67 @@
 {
-  "name": "project-chatify",
-  "version": "1.0.0",
-  "description": "A chatbot using chatbox-fca-remake.",
-  "main": "index.js",
-  "engines": {
-    "node": "18.x"
-  },
-  "scripts": {
-    "start": "node index.js",
-    "test": "mocha"
-  },
-  "dependencies": {
-    "chatbox-fca-remake": "^4.0.5",
-    "child_process": "^1.0.2"
-  },
-  "devDependencies": {
-  },
-  "keywords": [
-    "chatbot",
-    "facebook",
-    "messenger",
-    "bot"
-  ],
-  "author": "Jr Busaco, Hajime Atomyc",
-  "license": "MIT"
+    "name": "kokoro-project",
+    "version": "3.0.5",
+    "description": "A Powerful Chatbot Messenger with various ai models.",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "kokoro",
+        "kokoro-project",
+        "kokoro-ai"
+    ],
+    "author": [
+        "Kenneth Panio",
+        "Hajime Yuuta",
+        "Atomic-Zero",
+        "Cid Kagenou",
+        "Atomic Slash Studio",
+        "Hajime Atomyc",
+        "Pogi",
+        "Cid",
+        "Aizintel",
+        "Jr Busaco",
+        "Mark Hitsuraan",
+        "Mark devs"
+    ],
+    "license": "ISC",
+    "dependencies": {
+        "child_process": "^1.0.2",
+    },
+    "devDependencies": {
+        "eslint": "^7.5.0",
+        "mocha": "^7.0.1",
+        "prettier": "^1.11.1"
+    },
+    "eslintConfig": {
+        "env": {
+            "commonjs": true,
+            "es2021": true,
+            "node": true
+        },
+        "extends": "eslint:recommended",
+        "parserOptions": {
+            "ecmaVersion": 13
+        },
+        "rules": {
+            "no-prototype-builtins": 0,
+            "no-unused-vars": 1,
+            "comma-dangle": 1,
+            "no-redeclare": 0,
+            "prefer-const": 1,
+            "no-useless-escape": 0,
+            "no-mixed-spaces-and-tabs": 0,
+            "semi": 1,
+            "no-useless-catch": 0,
+            "no-empty": 0,
+            "use-isnan": 0,
+            "no-extra-semi": 1,
+            "no-async-promise-executor": 0,
+            "no-unreachable": 1,
+            "valid-typeof": 0,
+            "no-case-declarations": 0
+        }
+    }
 }

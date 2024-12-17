@@ -1,9 +1,11 @@
 module.exports = {
   config: {
     name: "test",
-    cooldown: 5 
+    description: "Command description", 
+    cooldown: 5,
   },
-  execute(api, message) {
-    api.sendMessage(`Hello, ${message.senderID}!`, message.threadID);
-  }
+  execute: (api, message, args) => {
+    const response = `You used the command "${args.join(" ")}"`;
+    api.sendMessage(response, message.threadID);
+  },
 };
