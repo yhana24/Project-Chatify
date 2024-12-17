@@ -91,7 +91,7 @@ login({ appState: fbstate }, (err, api) => {
       return;
     }
 
-if (message || message.body) return;
+if (!message || !message.body) return;
     
     const args = message.body.split(" ");
     const commandName = args.shift()?.toLowerCase();
