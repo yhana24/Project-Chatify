@@ -1,0 +1,27 @@
+{
+  "name": "project-chatify",
+  "version": "1.0.0",
+  "description": "A chatbot using chatbox-fca-remake.",
+  "main": "index.js",
+  "engines": {
+    "node": "18.x"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "mocha"
+  },
+  "dependencies": {
+    "chatbox-fca-remake": "^4.0.5",
+    "child_process": "^1.0.2"
+  },
+  "devDependencies": {
+  },
+  "keywords": [
+    "chatbot",
+    "facebook",
+    "messenger",
+    "bot"
+  ],
+  "author": "Jr Busaco, Hajime Atomyc",
+  "license": "MIT"
+}
