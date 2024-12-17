@@ -24,32 +24,58 @@ const cmdsPath = path.join(__dirname, "script", "cmds");
 if (fs.existsSync(cmdsPath)) {
   const cmdsFiles = fs.readdirSync(cmdsPath).filter((file) => file.endsWith(".js"));
   for (const file of cmdsFiles) {
-    const command = require(path.join(cmdsPath, file));
-    if (command.name) bot.commands.set(command.config.name, command);
+    try {
+      const command = require(path.join(cmdsPath, file));
+
+      if (command.name) {
+        const config = { name: command.name, cooldown: command.cooldown || 5 };
+        bot.commands.set(command.name, { ...command, config });
+      } else {
+        console.warn(`Command file ${file} does not have a valid name.`);
+      }
+    } catch (error) {
+      console.error(`Error loading command ${file}:`, error.message);
+    }
   }
+} else {
+  console.error("Commands path does not exist!");
 }
 
 const eventsPath = path.join(__dirname, "script", "events");
 if (fs.existsSync(eventsPath)) {
   const eventsFiles = fs.readdirSync(eventsPath).filter((file) => file.endsWith(".js"));
   for (const file of eventsFiles) {
-    const event = require(path.join(eventsPath, file));
-    if (event.name) bot.events.set(event.config.name, event);
+    try {
+      const event = require(path.join(eventsPath, file));
+      if (event.name) bot.events.set(event.config.name, event);
+    } catch (error) {
+      console.error(`Error loading event ${file}:`, error.message);
+    }
   }
+} else {
+  console.error("Events path does not exist!");
 }
 
 const fbstatePath = "c3c.json";
 let fbstate;
 
 if (fs.existsSync(fbstatePath)) {
-  fbstate = JSON.parse(fs.readFileSync(fbstatePath, "utf8"));
+  try {
+    fbstate = JSON.parse(fs.readFileSync(fbstatePath, "utf8"));
+  } catch (error) {
+    console.error("Failed to parse fbstate.json:", error.message);
+    process.exit(1);
+  }
 } else {
   console.error("No fbstate found! Please provide fbstate.");
   process.exit(1);
 }
 
 login({ appState: fbstate }, (err, api) => {
-  if (err) return console.error("Login failed:", err);
+  if (err) {
+    console.error("Login failed:", err);
+    return;
+  }
 
   console.log("Successfully logged in!");
 
@@ -61,11 +87,13 @@ login({ appState: fbstate }, (err, api) => {
 
   api.listenMqtt((err, message) => {
     if (err) {
-      console.log("Error on listenMqtt:", err);
+      console.error("Error on listenMqtt:", err);
       return;
     }
 
-    const args = message.body?.split(" ") || [];
+if (message || message.body) return;
+    
+    const args = message.body.split(" ");
     const commandName = args.shift()?.toLowerCase();
 
     if (bot.commands.has(commandName)) {
@@ -97,6 +125,7 @@ login({ appState: fbstate }, (err, api) => {
       try {
         command.execute(api, message, args);
       } catch (error) {
+        console.error(`Error executing command ${commandName}:`, error.message);
         api.sendMessage(
           global.font(`Error executing command ${commandName}: ${error.message}`),
           message.threadID
