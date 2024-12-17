@@ -1,4 +1,4 @@
-const login = require("./chatbox-fca-remake/index");
+const login = require("chatbox-fca-remake");
 const fs = require("fs");
 const path = require("path");
 const { font } = require("./utils/font.js");
