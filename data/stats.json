@@ -1,0 +1,6 @@
+{
+  "commands": {
+    "ping": 5,
+    "help": 3
+  }
+}

@@ -1,14 +1,35 @@
 {
-    "apiOptions": {
-        "forceLogin": false,
-        "logLevel": "silent",
-        "selfListen": false,
-        "autoReconnect": false,
-        "updatePresence": false,
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",
-        "autoMarkDelivery": false,
-        "autoMarkRead": false,
-        "online": false,
-        "listenEvents": true
-    }
+   "name": "Chatify",
+   "prefix": "",
+   "admin": [""],
+   "options": {
+       "listenEvents": true,
+       "selfListen": false,
+       "autoMarkRead": false,
+       "forceLogin": true,
+       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+       "online": false
+   },
+   "features": {
+       "autoGreet": {
+           "enabled": true,
+           "morning": "Good morning everyone! 🌅",
+           "night": "Good night everyone! 🌙"
+       },
+       "antiSpam": {
+           "enabled": true,
+           "maxMessages": 5,
+           "timeWindow": 10,
+           "muteTime": 300
+       },
+       "autoRestart": {
+           "enabled": true,
+           "interval": 1,
+           "message": "🔄 Scheduled restart"
+       }
+   },
+   "database": {
+       "enabled": true,
+       "path": "./data"
+   }
 }

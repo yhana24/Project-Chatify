@@ -28,16 +28,18 @@
     ],
     "license": "ISC",
     "dependencies": {
-        "chatbox-fca-remake": "^4.0.6",
-        "child_process": "^1.0.2",
-        "request": "^2.88.2",
-        "random-useragent": "^0.5.0",
-        "bluebird": "^3.7.2",
         "axios": "^1.6.5",
+        "bluebird": "^3.7.2",
+        "chatbox-fca-remake": "^4.0.7",
         "cheerio": "^0.22.0",
+        "child_process": "^1.0.2",
+        "fs-extra": "^11.2.0",
         "https-proxy-agent": "^4.0.0",
+        "moment-timezone": "^0.5.46",
         "mqtt": "^3.0.0",
         "npmlog": "^1.2.0",
+        "random-useragent": "^0.5.0",
+        "request": "^2.88.2",
         "websocket-stream": "^5.5.0"
     },
     "devDependencies": {

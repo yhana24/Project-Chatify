@@ -1,138 +1,195 @@
 const login = require("chatbox-fca-remake");
-const fs = require("fs");
+const fs = require("fs-extra");
 const path = require("path");
-const { font } = require("./utils/font.js");
+const axios = require("axios");
+const moment = require("moment-timezone");
+const Database = require("./utils/database");
+const logger = require("./utils/logger");
 
-global.font = font;
-
-let config;
-try {
-  config = JSON.parse(fs.readFileSync("config.json", "utf8"));
-  global.config = config;
-} catch (err) {
-  console.error("Failed to load config.json:", err.message);
-  process.exit(0);
-}
-
-const bot = {
-  commands: new Map(),
-  events: new Map(),
-  cooldowns: new Map(),
+global.client = {
+    commands: new Map(),
+    events: new Map(),
+    cooldowns: new Map(),
+    messageQueue: new Map(),
+    utils: require("./utils/helper")
 };
 
-const cmdsPath = path.join(__dirname, "script", "cmds");
-if (fs.existsSync(cmdsPath)) {
-  const cmdsFiles = fs.readdirSync(cmdsPath).filter((file) => file.endsWith(".js"));
-  for (const file of cmdsFiles) {
-    try {
-      const command = require(path.join(cmdsPath, file));
+global.data = {
+    threadInfo: new Database("threads.json"),
+    userInfo: new Database("users.json"),
+    settings: new Database("settings.json"),
+    stats: new Database("stats.json"),
+    temps: {},
+    maintain: false
+};
 
-      if (command.name) {
-        const config = { name: command.name, cooldown: command.cooldown || 5 };
-        bot.commands.set(command.name, { ...command, config });
-      } else {
-        console.warn(`Command file ${file} does not have a valid name.`);
-      }
-    } catch (error) {
-      console.error(`Error loading command ${file}:`, error.message);
-    }
-  }
-} else {
-  console.error("Commands path does not exist!");
-}
+global.config = require("./config.json");
 
-const eventsPath = path.join(__dirname, "script", "events");
-if (fs.existsSync(eventsPath)) {
-  const eventsFiles = fs.readdirSync(eventsPath).filter((file) => file.endsWith(".js"));
-  for (const file of eventsFiles) {
-    try {
-      const event = require(path.join(eventsPath, file));
-      if (event.name) bot.events.set(event.config.name, event);
-    } catch (error) {
-      console.error(`Error loading event ${file}:`, error.message);
-    }
-  }
-} else {
-  console.error("Events path does not exist!");
-}
+function loadCommands() {
+    const commandFiles = fs.readdirSync(path.join(__dirname, "script", "cmds"))  
+        .filter(file => file.endsWith(".js"));
 
-const fbstatePath = "c3c.json";
-let fbstate;
-
-if (fs.existsSync(fbstatePath)) {
-  try {
-    fbstate = JSON.parse(fs.readFileSync(fbstatePath, "utf8"));
-  } catch (error) {
-    console.error("Failed to parse fbstate.json:", error.message);
-    process.exit(1);
-  }
-} else {
-  console.error("No fbstate found! Please provide fbstate.");
-  process.exit(1);
-}
-
-login({ appState: fbstate }, (err, api) => {
-  if (err) {
-    console.error("Login failed:", err);
-    return;
-  }
-
-  console.log("Successfully logged in!");
-
-  const getfbstate = api.getAppState();
-  fs.writeFileSync(fbstatePath, JSON.stringify(getfbstate, null, 2));
-  console.log("fbstate updated successfully!");
-
-  api.setOptions(global.config.apiOptions);
-
-  api.listenMqtt((err, message) => {
-    if (err) {
-      console.error("Error on listenMqtt:", err);
-      return;
-    }
-
-if (!message || !message.body) return;
-    
-    const args = message.body.split(" ");
-    const commandName = args.shift()?.toLowerCase();
-
-    if (bot.commands.has(commandName)) {
-      const command = bot.commands.get(commandName);
-
-      if (!bot.cooldowns.has(commandName)) {
-        bot.cooldowns.set(commandName, new Map());
-      }
-
-      const now = Date.now();
-      const timestamps = bot.cooldowns.get(commandName);
-      const cooldown_amount = (command.config.cooldown || 5) * 1000;
-
-      if (timestamps.has(message.senderID)) {
-        const expiration = timestamps.get(message.senderID) + cooldown_amount;
-
-        if (now < expiration) {
-          const timeLeft = (expiration - now) / 1000;
-          return api.sendMessage(
-            global.font(`Please wait ${timeLeft.toFixed(1)} more second(s) before using this command again.`),
-            message.threadID
-          );
+    for (const file of commandFiles) {
+        try {
+            const command = require(path.join(__dirname, "script", "cmds", file)); 
+            global.client.commands.set(command.config.name, command);
+            
+            if (command.config.aliases) {
+                command.config.aliases.forEach(alias => {
+                    global.client.commands.set(alias, command);
+                });
+            }
+            
+            logger.system(`Loaded command: ${command.config.name}`);
+        } catch (error) {
+            logger.error(`Failed to load command ${file}: ${error}`);
         }
-      }
-
-      timestamps.set(message.senderID, now);
-      setTimeout(() => timestamps.delete(message.senderID), cooldown_amount);
-
-      try {
-        command.execute(api, message, args);
-      } catch (error) {
-        console.error(`Error executing command ${commandName}:`, error.message);
-        api.sendMessage(
-          global.font(`Error executing command ${commandName}: ${error.message}`),
-          message.threadID
-        );
-      }
     }
-  });
+}
+
+function loadEvents() {
+    const eventFiles = fs.readdirSync(path.join(__dirname, "script", "events"))  
+        .filter(file => file.endsWith(".js"));
+
+    for (const file of eventFiles) {
+        try {
+            const event = require(path.join(__dirname, "script", "events", file)); 
+            global.client.events.set(event.config.name, event);
+            logger.system(`Loaded event: ${event.config.name}`);
+        } catch (error) {
+            logger.error(`Failed to load event ${file}: ${error}`);
+        }
+    }
+}
+
+async function handleMessage({ api, event, args, commandName }) {
+    const command = global.client.commands.get(commandName);
+    if (!command) return;
+
+    if (command.config.permissions) {
+        const hasPermission = command.config.permissions.some(permission => 
+            permission === "user" || 
+            (permission === "admin" && global.config.admin.includes(event.senderID))
+        );
+        
+        if (!hasPermission) {
+            return api.sendMessage("⚠️ Insufficient permissions", event.threadID);
+        }
+    }
+
+    const cooldownKey = `${commandName}-${event.senderID}`;
+    const cooldownTime = global.client.cooldowns.get(cooldownKey);
+    const now = Date.now();
+
+    if (cooldownTime && now < cooldownTime) {
+        const timeLeft = Math.ceil((cooldownTime - now) / 1000);
+        return api.sendMessage(
+            `⏳ Please wait ${timeLeft}s before using this command again.`,
+            event.threadID
+        );
+    }
+
+    try {
+        await command.run({ api, event, args });
+        
+        if (command.config.cooldown) {
+            global.client.cooldowns.set(
+                cooldownKey,
+                now + (command.config.cooldown * 1000)
+            );
+        }
+
+        logger.cmd(`${event.senderID} used ${commandName}`);
+        
+        const stats = global.data.stats.get("commands") || {};
+        stats[commandName] = (stats[commandName] || 0) + 1;
+        global.data.stats.set("commands", stats);
+    } catch (error) {
+        logger.error(`Command ${commandName} error: ${error}`);
+        api.sendMessage("❌ An error occurred", event.threadID);
+    }
+}
+
+async function handleEvent({ api, event }) {
+    const eventHandlers = Array.from(global.client.events.values())
+        .filter(e => e.config.type === event.type);
+
+    for (const handler of eventHandlers) {
+        try {
+            await handler.run({ api, event });
+        } catch (error) {
+            logger.error(`Event ${handler.config.name} error: ${error}`);
+        }
+    }
+}
+
+function setupAutoRestart() {
+    if (!global.config.features.autoRestart.enabled) return;
+    
+    setInterval(() => {
+        logger.system("Performing scheduled restart...");
+        process.exit(1);
+    }, global.config.features.autoRestart.interval * 3600000);
+}
+
+async function startBot() {
+    try {
+        logger.system("Starting Chatify Bot...");
+        
+        await Promise.all([
+            global.data.threadInfo.init(),
+            global.data.userInfo.init(),
+            global.data.settings.init(),
+            global.data.stats.init()
+        ]);
+
+        const appState = JSON.parse(fs.readFileSync("./c3c.json", "utf8"));
+        
+        login({ appState }, (err, api) => {
+            if (err) {
+                logger.error(`Login failed: ${err}`);
+                return process.exit(1);
+            }
+
+            api.setOptions(global.config.options);
+            global.api = api;
+
+            loadCommands();
+            loadEvents();
+            setupAutoRestart();
+
+            logger.success("Bot started successfully!");
+
+            api.listenMqtt(async (err, event) => {
+                if (err) return logger.error(`Listen error: ${err}`);
+                if (!event || !event.body) return;
+                
+                if (global.data.maintain && !global.config.admin.includes(event.senderID)) {
+                    return;
+                }
+
+                const prefix = global.config.prefix;
+                if (event.body.startsWith(prefix)) {
+                    const [commandName, ...args] = event.body.slice(prefix.length).trim().split(/\s+/);
+                    await handleMessage({ api, event, args, commandName: commandName.toLowerCase() });
+                }
+
+                await handleEvent({ api, event });
+            });
+        });
+
+    } catch (error) {
+        logger.error(`Startup error: ${error}`);
+        process.exit(1);
+    }
+}
+
+process.on("uncaughtException", error => {
+    logger.error(`Uncaught Exception: ${error}`);
 });
-// if something went wrong this will catch error globally ; >
-process.on("unhandledRejection", reason => console.log(reason));
+
+process.on("unhandledRejection", error => {
+    logger.error(`Unhandled Rejection: ${error}`);
+});
+
+startBot();
