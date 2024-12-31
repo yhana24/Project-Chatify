@@ -1,7 +1,7 @@
 {
-   "name": "Chatify",
-   "prefix": "",
-   "admin": [""],
+   "name": "Chesca",
+   "prefix": "/",
+   "admin": ["61571540572091"],
    "options": {
        "listenEvents": true,
        "selfListen": false,
